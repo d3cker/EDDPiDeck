@@ -1,8 +1,10 @@
 import io
 import base64
-import PIL
 import time
 import output
+import urllib.request
+import os
+import PIL
 
 # nice one, found on stackoverflow
 def resize_image(image_path, resize=None):
@@ -84,3 +86,37 @@ def create_layout( sg , layout , btn_list , journal_list , general):
 
     system_list.append(sg.Image(data=output.loadered, key="A0",  enable_events = True, pad = 0))
     layout.append(system_list)
+
+def write_keycode(keycode):
+    try:
+        with open('/dev/hidg0', 'rb+') as fd:
+            fd.write(keycode.encode())
+            fd.close()
+    except:
+        display_message( sg , "Keboard interface not acvite!\nCable not connected?", 5 )
+
+def update_buttons(btn_list, btn_list_prev, general,window):
+    for idx,i in enumerate(btn_list):
+        if i['key_status'] != btn_list_prev[idx]['key_status']:
+            window[i['key_name']].update(image_filename = general.icons_path + i['key_icon'] + "-" + i['key_status'] + ".png" , button_color = general.button_color, image_subsample = general.image_scale)
+#            print(i['key_status'] + " - " + btn_list_prev[idx]['key_status'])
+            btn_list_prev[idx]['key_status'] = btn_list[idx]['key_status']
+
+def update_journal(journal_list, last_journal, general, window):
+    if(journal_list[0] != "0"):
+        image_url = r'http://' + general.edd_addr + '/journalicons/' + journal_list[0] + '.png'
+        file_name = "/tmp/" + journal_list[0] + ".png"
+        if not os.path.exists(file_name):
+            print("File " + file_name + " doesn't exist. Downloading")
+            urllib.request.urlretrieve(image_url, file_name)
+        window['-JICON-'].update(data=resize_image(file_name,resize=(50,50)))
+    else:
+        window["-JICON-"].update(output.loadered)
+
+    journal_date = journal_list[1][:-1].replace("T","\n")
+    window["-JDATE-"].update(journal_date,text_color=general.button_font_color)
+    journal_event = "\n" + journal_list[2] if len(journal_list[2]) < 20 else journal_list[2]
+    window["-JEVENT-"].update(journal_event, text_color=general.button_font_color)
+
+    journal_message = "\n" + journal_list[3] if len(journal_list[3]) < 65 else journal_list[3]
+    window["-JTEXT-"].update(journal_message,text_color=general.button_font_color)
