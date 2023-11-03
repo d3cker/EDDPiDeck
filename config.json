@@ -15,7 +15,6 @@
         "button_color_overwrite" : "True",
         "key_release_delay" : "0.3",
         "edd_addr" : "127.0.0.1:6502"
-
     },
     "DeckButtons": [
         { "key_name" : "L", "key_code" : "0x0f","key_text" : "\n\n\n\n\nLANDING\nGEAR", "key_icon" : "landing-gear", "key_event" : "LandingGear" },
