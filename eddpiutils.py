@@ -61,7 +61,8 @@ def load_buttons(jdata):
     return buttons_list
 
 # create layout
-def create_layout( sg , layout , btn_list , journal_list , general):
+def create_layout( sg ,  btn_list , journal_list , general):
+    layout = []
     title_list = []
     system_list = []
     buttons_list = []
@@ -86,6 +87,7 @@ def create_layout( sg , layout , btn_list , journal_list , general):
 
     system_list.append(sg.Image(data=output.loadered, key="A0",  enable_events = True, pad = 0))
     layout.append(system_list)
+    return layout
 
 def write_keycode(keycode):
     try:
@@ -99,7 +101,6 @@ def update_buttons(btn_list, btn_list_prev, general,window):
     for idx,i in enumerate(btn_list):
         if i['key_status'] != btn_list_prev[idx]['key_status']:
             window[i['key_name']].update(image_filename = general.icons_path + i['key_icon'] + "-" + i['key_status'] + ".png" , button_color = general.button_color, image_subsample = general.image_scale)
-#            print(i['key_status'] + " - " + btn_list_prev[idx]['key_status'])
             btn_list_prev[idx]['key_status'] = btn_list[idx]['key_status']
 
 def update_journal(journal_list, last_journal, general, window):
@@ -120,3 +121,76 @@ def update_journal(journal_list, last_journal, general, window):
 
     journal_message = "\n" + journal_list[3] if len(journal_list[3]) < 65 else journal_list[3]
     window["-JTEXT-"].update(journal_message,text_color=general.button_font_color)
+
+def create_text(sg , general, text, size, pad=(5, 8)):
+    return sg.Text(text, pad=pad, size = size, font=general.font_bold, background_color=general.button_font_color, text_color = "black", expand_x=True)
+
+def create_key(sg, general, key, size, pad=(5, 8)):
+    return sg.Input(default_text="None", pad=pad ,font=general.font, size=size, key=key, disabled_readonly_background_color="#000000", text_color=general.button_font_color, use_readonly_for_disable=True, readonly=True, expand_x=True)
+
+def create_row(sg , general, text,key):
+    return [ create_text(sg, general, text, (15,1)), create_key(sg, general, key, (45,1)) ]
+
+def create_status_layout( sg , btn_list , journal_list , general):
+    layout_status = [
+        create_row(sg, general , "System Name","System"),
+        create_row(sg ,general , "Visits","VisitCount"),
+        [ sg.HSeparator(color=general.button_font_color, pad=(5,8)) ],
+        create_row(sg, general , "Allegiance","Allegiance"),
+        create_row(sg ,general , "Government","Gov"),
+        create_row(sg, general , "Economy","Economy"),
+        create_row(sg ,general , "Faction","Faction"),
+        create_row(sg ,general , "Security","Security"),
+        [ sg.HSeparator(color=general.button_font_color, pad=(5,8)) ],
+        create_row(sg, general , "Ship","Ship"),
+        [ create_text(sg, general , "Fuel",(4,1)), create_key(sg, general , "Fuel",(5,1)),
+          create_text(sg, general , "Range",(5,1)), create_key(sg, general , "Range",(5,1)),
+          create_text(sg, general , "Tank Size",(9,1)), create_key(sg, general , "TankSize",(5,1))],
+        [ create_text(sg, general , "Micro Resources",(15,1)), create_key(sg, general , "MicroResources",(5,1)),
+          create_text(sg, general , "Cargo",(5,1)), create_key(sg, general , "Cargo",(5,1))],
+        [ create_text(sg, general , "Data",(15,1)), create_key(sg, general , "Data",(5,1)),
+          create_text(sg, general , "Materials",(9,1)), create_key(sg, general , "Materials",(5,1))],
+        [ sg.HSeparator(color=general.button_font_color, pad=(5,8))],
+        [ sg.Text( "Travel" , pad=(5,(8,0)), size = (50,1),font=general.font_bold,background_color=general.button_font_color,text_color = "black", justification='c',expand_x=True)],
+        [ create_text(sg, general , "Dist",(4,1),((5,0),(1,8))), create_key(sg, general , "Dist",(5,1),((0,0),(1,8))),
+          create_text(sg, general , "Jumps",(5,1),((0,0),(1,8))), create_key(sg, general , "Jumps",(5,1),((0,0),(1,8))),
+          create_text(sg, general , "Time",(4,1),((0,0),(1,8))), create_key(sg, general , "Time",(5,1),((0,5),(1,8)))]
+    ]
+
+    layout_controls = [
+        create_row(sg, general , "Commander", "Commander"),
+        create_row(sg, general , "Body Name", "Bodyname"),
+        create_row(sg, general , "Credits", "Credits"),
+        [ create_text(sg, general , "Game Mode",(8,1)), create_key(sg, general , "GameMode",(5,1)),
+          create_text(sg, general , "Mode",(4,1)), create_key(sg, general , "Mode",(5,1))],
+        [ sg.Text( "Distance" , pad=(5,(8,0)), size = (50,1),font=general.font_bold,background_color=general.button_font_color,text_color = "black", justification='c',expand_x=True)],
+        [ create_text(sg, general , "Home",(4,1),((5,0),(1,8))), create_key(sg, general , "HomeDist",(5,1),((0,0),(1,8))),
+          create_text(sg, general , "SOL",(3,1),((0,0),(1,8))), create_key(sg, general , "SolDist",(5,1),((0,5),(1,8)))]
+    ]
+
+    layout = [
+        [sg.Column(layout_status, vertical_alignment='top'), sg.VSeparator(color=general.button_font_color), sg.Column(layout_controls, vertical_alignment='top')]
+    ]
+
+    return layout
+
+def status_update(status, general, window):
+        for i in [ 'System' , 'VisitCount' ]:
+            if(window[i].get() != status.SystemData[i]):
+                window[i].update(value=status.SystemData[i])
+
+        for i in [ 'Allegiance' , 'Gov' , 'Economy' , 'Faction' , 'Security' ]:
+            if(window[i].get() != status.EDDB[i]):
+                window[i].update(value=status.EDDB[i])
+
+        for i in [ 'Ship', 'Fuel', 'Range', 'TankSize', 'Cargo', 'Data', 'Materials', 'MicroResources' ]:
+            if(window[i].get() != status.Ship[i]):
+                window[i].update(value=status.Ship[i])
+
+        for i in [ 'Dist' , 'Jumps' , 'Time' ]:
+            if(window[i].get() != status.Travel[i]):
+                window[i].update(value=status.Travel[i])
+
+        for i in [ "Bodyname", "HomeDist", "SolDist", "GameMode", "Credits", "Commander", "Mode" ]:
+            if(window[i].get() != status.Other[i]):
+                window[i].update(value=status.Other[i])

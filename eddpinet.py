@@ -3,7 +3,14 @@ import PySimpleGUI as sg
 import json
 import copy
 
-def on_message(ws, message, btn_list, journal_list):
+def request_status(ws):
+    status_request = b'{\"requesttype\":\"status\",\"entry\":-1}'
+    ws.send(status_request)
+    indicator_request = b'{\"requesttype\":\"indicator\"}'
+    ws.send(indicator_request)
+
+
+def on_message(ws, message, btn_list, journal_list, status):
     gui_events = ["TargetPanel", "CommsPanel", "RolePanel", "SystemPanel", "SystemMap", "GalaxyMap", "FSSMode", "FSD", "None"]
     fsd_events = ["Supercruise", "FsdCharging", "FsdJump"]
     eddm = json.loads(message[0:])
@@ -26,6 +33,9 @@ def on_message(ws, message, btn_list, journal_list):
                 if eddm[j] and i['key_event'] == "FSD":
                     btn_list[idx]['key_status']="active"
 
+    if eddm["responsetype"] in ["status"]:
+        status.update(eddm)
+
 def on_error(ws, error):
     display_message( sg, "Unable to connect to EDDiscovery.\n[ "+ str(error) + " ]\n\nReconnecting...\n", 3 )
     print(error)
@@ -39,7 +49,4 @@ def on_open(ws, btn_list):
         i['key_status']="normal"
     display_message( sg , "Connected to EDDiscovery\n", 2 )
     print("Opened connection")
-    status_request = b'{\"requesttype\":\"status\",\"entry\":-1}'
-    ws.send(status_request)
-    indicator_request = b'{\"requesttype\":\"indicator\"}'
-    ws.send(indicator_request)
+    request_status(ws)

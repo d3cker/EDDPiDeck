@@ -9,9 +9,9 @@ import copy
 import functools
 
 from PIL import Image, ImageTk, ImageSequence
-from eddpiutils import resize_image,str2bool, display_message, load_buttons, create_layout, update_buttons, write_keycode, update_journal
-from eddpinet import on_error, on_close, on_message, on_open
-from eddpimethods import Config
+from eddpiutils import resize_image,str2bool, display_message, load_buttons, create_layout, update_buttons, write_keycode, update_journal,create_status_layout,status_update
+from eddpinet import on_error, on_close, on_message, on_open, request_status
+from eddpimethods import Config,Status
 
 if __name__ == '__main__':
     NULL_CHAR = chr(0)
@@ -20,6 +20,7 @@ if __name__ == '__main__':
     last_journal = []
     indicator_dict = {}
     layout = []
+    status_layout=[]
 
     # Read config
     f = open('config.json')
@@ -33,34 +34,44 @@ if __name__ == '__main__':
     btn_list_prev = copy.deepcopy(btn_list)
 
     #create layout
-    create_layout(sg, layout , btn_list, journal_list, general)
+    layout = create_layout(sg, btn_list, journal_list, general)
 
     # Create Main Window, Enable titlebar and resize option for X11 support
-    window = sg.Window('Elite PiDeck Keys', layout, no_titlebar=False, element_justification='c', resizable=True).Finalize()
-    window.move(0,10)
+    window = sg.Window('Elite PiDeck Keys', layout, location=(0,10),no_titlebar=False, element_justification='c', resizable=True).Finalize()
     window.Maximize()
     window.TKroot["cursor"] = "none"
 
-    #window_status = sg.Window('Elite PiDeck Status', layout_status, no_titlebar=False, element_justification='c', resizable=True).Finalize()
-    #window_status.move(1024,10)
-    #window_status.Maximize()
-    #window_status.TKroot["cursor"] = "none"
+    status_layout = create_status_layout(sg, btn_list, journal_list, general)
+    window_status = sg.Window('Elite PiDeck Status', status_layout, location=(1024,10),no_titlebar=False, element_justification='c', resizable=True).Finalize()
+    window_status.Maximize()
+    window_status.TKroot["cursor"] = "none"
+
+    status = Status()
 
     # EDDiscovery websocket connection
     websocket.enableTrace(True)
     websocket.setdefaulttimeout(1)
     ws = websocket.WebSocketApp("ws://" + general.edd_addr +"/",subprotocols=["EDDJSON"],
                 on_open=functools.partial(on_open,btn_list=btn_list),
-                on_message=functools.partial(on_message, btn_list=btn_list, journal_list=journal_list),
+                on_message=functools.partial(on_message, btn_list=btn_list, journal_list=journal_list,status=status),
                 on_error=on_error,
                 on_close=on_close)
     ws.run_forever(dispatcher=rel, reconnect=5)  # Set dispatcher to automatic reconnection, 5 second reconnect delay if connection closed unexpectedly
     rel.signal(2, rel.abort)  # Keyboard Interrupt
 
     lasttime = time.time()
+#    last_status = time.time()
     while True:
-        update_buttons(btn_list, btn_list_prev,general,window)
         curtime = time.time()
+#        if (curtime - last_status) > 1:
+#            request_status(ws)
+#            last_status = curtime
+
+        update_buttons(btn_list, btn_list_prev,general,window)
+        if(status.NeedsUpdate):
+            status_update(status,general,window_status)
+            status.ClearUpdate()
+
         event, values = window.read(timeout=100)
         for i in btn_list:
             if event == i['key_name']:
@@ -85,5 +96,7 @@ if __name__ == '__main__':
             rel.loop()
         except:
             display_message(sg, "Unknown error. \nEDDiscovery disconnected?", 5)
+
+    window_status.close()
     window.close()
 
