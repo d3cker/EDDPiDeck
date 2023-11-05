@@ -88,9 +88,12 @@ class Status():
             "GameMode": "",
             "Credits": "",
             "Commander": "",
-            "Mode": ""
+            "Mode": "",
+            "RemainingJumps": ""
         }
+
         self.NeedsUpdate = False
+
     def update(self,status):
         for i in [ 'System' , 'VisitCount' ]:
             self.SystemData[i] = str(status['SystemData'][i])
@@ -104,10 +107,55 @@ class Status():
         for i in [ 'Dist' , 'Jumps' , 'Time' ]:
             self.Travel[i] = str(status['Travel'][i])
 
-        for i in [ "Bodyname", "HomeDist", "SolDist", "GameMode", "Credits", "Commander", "Mode" ]:
+        for i in [ "Bodyname", "HomeDist", "SolDist", "GameMode", "Credits", "Commander", "Mode" , "RemainingJumps" ]:
             self.Other[i] = str(status[i])
 
         self.NeedsUpdate = True
 
     def ClearUpdate(self):
         self.NeedsUpdate = False
+
+class Indicator():
+    def __init__(self):
+        self.Other = {
+            "FsdMassLocked": "",
+            "ShieldsUp": "",
+            "LowFuel": "",
+            "OverHeating": "",
+            "IsInDanger":"",
+            "BeingInterdicted": "",
+            "LegalState": ""
+        }
+
+        self.NeedsUpdate = False;
+
+    def update(self,status):
+        for i in [ "FsdMassLocked" , "ShieldsUp" , "LowFuel" , "OverHeating" , "IsInDanger" , "BeingInterdicted" , "LegalState" ]:
+            self.Other[i] = str(status[i])
+
+        self.NeedsUpdate = True
+
+    def ClearUpdate(self):
+        self.NeedsUpdate = False
+
+class Mission():
+    def __init__(self):
+        self.Details = {
+            "Description": "None",
+            "Status": "NONE"
+        }
+
+    def UpdateMission(self, status, description):
+        self.Details["Status"]=status
+        self.Details["Description"]=description
+
+    def GetMission(self):
+        ret_mission= str(self.Details["Status"]) + ":" + str(self.Details["Description"])
+        return ret_mission
+
+    def GetMissionStatus(self):
+        return str(self.Details["Status"])
+
+    def GetMissionDescription(self):
+        return str(self.Details["Description"])
+

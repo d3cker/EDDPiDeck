@@ -9,9 +9,9 @@ import copy
 import functools
 
 from PIL import Image, ImageTk, ImageSequence
-from eddpiutils import resize_image,str2bool, display_message, load_buttons, create_layout, update_buttons, write_keycode, update_journal,create_status_layout,status_update
+from eddpiutils import resize_image,str2bool, display_message, load_buttons, create_layout, update_buttons, write_keycode, update_journal,create_status_layout,status_update,indicator_update,mission_update
 from eddpinet import on_error, on_close, on_message, on_open, request_status
-from eddpimethods import Config,Status
+from eddpimethods import Config,Status,Indicator,Mission
 
 if __name__ == '__main__':
     NULL_CHAR = chr(0)
@@ -47,13 +47,15 @@ if __name__ == '__main__':
     window_status.TKroot["cursor"] = "none"
 
     status = Status()
+    indicator = Indicator()
+    mission = Mission()
 
     # EDDiscovery websocket connection
     websocket.enableTrace(True)
     websocket.setdefaulttimeout(1)
     ws = websocket.WebSocketApp("ws://" + general.edd_addr +"/",subprotocols=["EDDJSON"],
                 on_open=functools.partial(on_open,btn_list=btn_list),
-                on_message=functools.partial(on_message, btn_list=btn_list, journal_list=journal_list,status=status),
+                on_message=functools.partial(on_message, btn_list=btn_list, journal_list=journal_list,status=status, indicator=indicator),
                 on_error=on_error,
                 on_close=on_close)
     ws.run_forever(dispatcher=rel, reconnect=5)  # Set dispatcher to automatic reconnection, 5 second reconnect delay if connection closed unexpectedly
@@ -72,6 +74,11 @@ if __name__ == '__main__':
             status_update(status,general,window_status)
             status.ClearUpdate()
 
+        if(indicator.NeedsUpdate):
+            indicator_update(indicator,general,window_status)
+            indicator.ClearUpdate()
+
+
         event, values = window.read(timeout=100)
         for i in btn_list:
             if event == i['key_name']:
@@ -89,7 +96,8 @@ if __name__ == '__main__':
         if(journal_list[0] == "0"):
             window["-JICON-"].UpdateAnimation(output.loadered, time_between_frames=1)
         if last_journal != journal_list:
-            update_journal(journal_list, last_journal, general, window)
+            update_journal(journal_list, last_journal, mission, general, window)
+            mission_update(mission, general, window_status)
             last_journal = journal_list.copy()
     # websocket update
         try:

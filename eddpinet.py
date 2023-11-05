@@ -10,7 +10,7 @@ def request_status(ws):
     ws.send(indicator_request)
 
 
-def on_message(ws, message, btn_list, journal_list, status):
+def on_message(ws, message, btn_list, journal_list, status, indicator):
     gui_events = ["TargetPanel", "CommsPanel", "RolePanel", "SystemPanel", "SystemMap", "GalaxyMap", "FSSMode", "FSD", "None"]
     fsd_events = ["Supercruise", "FsdCharging", "FsdJump"]
     eddm = json.loads(message[0:])
@@ -21,6 +21,7 @@ def on_message(ws, message, btn_list, journal_list, status):
                 journal_list[idx] = i
 
     if eddm["responsetype"] in ["indicatorpush","indicator"]:
+        indicator.update(eddm)
         journal_dict = eddm.copy()
         for idx,i in enumerate(btn_list):
             if i['key_event'] not in gui_events:

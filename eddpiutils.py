@@ -103,7 +103,7 @@ def update_buttons(btn_list, btn_list_prev, general,window):
             window[i['key_name']].update(image_filename = general.icons_path + i['key_icon'] + "-" + i['key_status'] + ".png" , button_color = general.button_color, image_subsample = general.image_scale)
             btn_list_prev[idx]['key_status'] = btn_list[idx]['key_status']
 
-def update_journal(journal_list, last_journal, general, window):
+def update_journal(journal_list, last_journal, mission, general, window):
     if(journal_list[0] != "0"):
         image_url = r'http://' + general.edd_addr + '/journalicons/' + journal_list[0] + '.png'
         file_name = "/tmp/" + journal_list[0] + ".png"
@@ -114,8 +114,14 @@ def update_journal(journal_list, last_journal, general, window):
     else:
         window["-JICON-"].update(output.loadered)
 
+    if journal_list[0] in [ "Journal.MissionAccepted" , "Journal.MissionFailed", "Journal.MissionAbandoned", "Journal.MissionCompleted" ]: 
+        mission_status = journal_list[0].replace("Journal.Mission","")
+        mission_details = journal_list[3]
+        mission.UpdateMission(mission_status,mission_details)
+
     journal_date = journal_list[1][:-1].replace("T","\n")
     window["-JDATE-"].update(journal_date,text_color=general.button_font_color)
+
     journal_event = "\n" + journal_list[2] if len(journal_list[2]) < 20 else journal_list[2]
     window["-JEVENT-"].update(journal_event, text_color=general.button_font_color)
 
@@ -130,6 +136,9 @@ def create_key(sg, general, key, size, pad=(5, 8)):
 
 def create_row(sg , general, text,key):
     return [ create_text(sg, general, text, (15,1)), create_key(sg, general, key, (45,1)) ]
+
+def create_indicator(sg,general, text,key):
+    return sg.Text( text, key=key , pad=(5,8), size = (15,1),font=general.font_bold,background_color=general.button_font_color,text_color = "black", justification='c',expand_x=True)
 
 def create_status_layout( sg , btn_list , journal_list , general):
     layout_status = [
@@ -165,7 +174,18 @@ def create_status_layout( sg , btn_list , journal_list , general):
           create_text(sg, general , "Mode",(4,1)), create_key(sg, general , "Mode",(5,1))],
         [ sg.Text( "Distance" , pad=(5,(8,0)), size = (50,1),font=general.font_bold,background_color=general.button_font_color,text_color = "black", justification='c',expand_x=True)],
         [ create_text(sg, general , "Home",(4,1),((5,0),(1,8))), create_key(sg, general , "HomeDist",(5,1),((0,0),(1,8))),
-          create_text(sg, general , "SOL",(3,1),((0,0),(1,8))), create_key(sg, general , "SolDist",(5,1),((0,5),(1,8)))]
+          create_text(sg, general , "SOL",(3,1),((0,0),(1,8))), create_key(sg, general , "SolDist",(5,1),((0,5),(1,8)))],
+        [ sg.Text( "Remaining Jumps " , pad=(5,8), size = (30,1),font=general.font_bold,background_color=general.button_font_color,text_color = "black", justification='c',expand_x=True),
+          sg.Input(default_text="None", pad=(5,8) ,font=general.font_bold, size=(5,1), key="RemainingJumps", disabled_readonly_background_color="#000000", text_color=general.button_font_color, use_readonly_for_disable=True, readonly=True, expand_x=True,justification='c')
+        ],
+        create_row(sg, general , "Legal State", "LegalState"),
+        [ create_indicator(sg,general, "Shields Up", "ShieldsUp"), create_indicator(sg,general, "Low Fuel", "LowFuel") ],
+        [ create_indicator(sg,general, "Mass Lock", "FsdMassLocked"), create_indicator(sg,general, "Overheat", "OverHeating") ],
+        [ create_indicator(sg,general, "Danger", "IsInDanger"), create_indicator(sg,general, "Interdict", "BeingInterdicted") ],
+
+        [ create_text(sg, general , "Mission Status",(15,1),((5,0),(8,0))), create_key(sg, general , "MissionStatus",(15,1),((1,5),(8,0)))],
+        [ sg.Text( "Mission description." , key="Mission", relief="sunken", pad=((5,5),(0,8)), size = (40,6),font=general.font_bold,background_color=sg.theme_background_color(), text_color = general.button_font_color, expand_x=True, expand_y=True) ]
+
     ]
 
     layout = [
@@ -191,6 +211,23 @@ def status_update(status, general, window):
             if(window[i].get() != status.Travel[i]):
                 window[i].update(value=status.Travel[i])
 
-        for i in [ "Bodyname", "HomeDist", "SolDist", "GameMode", "Credits", "Commander", "Mode" ]:
+        for i in [ "Bodyname", "HomeDist", "SolDist", "GameMode", "Credits", "Commander", "Mode" , "RemainingJumps" ]:
             if(window[i].get() != status.Other[i]):
                 window[i].update(value=status.Other[i])
+
+def indicator_update(indicator,general,window):
+        for i in [ "FsdMassLocked" , "ShieldsUp" , "LowFuel" , "OverHeating" , "IsInDanger" , "BeingInterdicted" , "LegalState" ]:
+#            print("INDI: " + str(indicator.Other[i]))
+            if indicator.Other[i] == "True":
+                window[i].update(background_color="#ffffff")
+            elif indicator.Other[i] == "False":
+                window[i].update(background_color=general.button_font_color)
+            else:
+                window[i].update(value=indicator.Other[i])
+
+def mission_update(mission, general, window):
+            mission_status = mission.GetMissionStatus()
+            mission_description = mission.GetMissionDescription()
+            if window["Mission"].get() != mission_description:
+                window["MissionStatus"].update(value=mission_status)
+                window["Mission"].update(value=mission_description)
